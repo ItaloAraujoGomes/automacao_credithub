@@ -4,22 +4,20 @@ import os
 
 # 📂 Caminho do PDF e do Excel de saída
 pdf_folder = r"C:\Users\7981\Desktop\relatorios_fidc"
-pdf_file = "ANALISE DO RESULTADO OPERACIONAL.pdf"
+pdf_file = "JUROS RECEBIDO 90.03.0003.pdf"
 pdf_path = os.path.join(pdf_folder, pdf_file)
-output_excel = os.path.join(pdf_folder, "resultado_operacional.xlsx")
+output_excel = os.path.join(pdf_folder, "resultado_juros/prorrogacoes.xlsx")
 
 # 📌 Dicionário para armazenar DataFrames separados por tipo de relatório
 report_data = {}
 processed_files = []
 
 # Lista com os nomes das colunas que você deseja definir
-colunas_personalizadas = [
-    "Bordero", "Prazo", "Fator", "", " ", "C.serv", " ", " ", "Vr.bruto", "Deságio", 
-     " ", "Serviço", " ", " ", "Cobrança", " ", "Vr.iof", "Vr.liberado", "Rec.Bruta", "IR", "C.Soc", 
-    "Cofins", "Pis", "Iss", " ", "Custos+Im", "Comissão", "Rec.Operac", "%am"
+colunas_personalizadas_juros = [
+    "Doctº", " ", " ", "Data", " ", " ", "Histórico", " ", "Valor", "D/C", "Saldo", " ", "D/C"
 ]
 
-def extract_table_from_pdf(pdf_path):   
+def extract_table_from_pdf(pdf_path):
     """Extrai tabelas do PDF e formata os dados."""
     data = []
     
@@ -31,15 +29,15 @@ def extract_table_from_pdf(pdf_path):
                     df = pd.DataFrame(table)
 
                     # Verifica se a tabela tem colunas suficientes para ser relevante
-                    if df.empty or df.shape[1] < len(colunas_personalizadas):
+                    if df.empty or df.shape[1] < len(colunas_personalizadas_juros):
                         continue
 
                     # Verifica se o número de colunas extraídas é maior que o número de colunas personalizadas
-                    if df.shape[1] <= len(colunas_personalizadas):
-                        df.columns = colunas_personalizadas[:df.shape[1]]
+                    if df.shape[1] <= len(colunas_personalizadas_juros):
+                        df.columns = colunas_personalizadas_juros[:df.shape[1]]
                     else:
                         # Caso o número de colunas extraídas seja maior, adiciona "colunas extras"
-                        df.columns = colunas_personalizadas + ['Coluna Extra {}'.format(i) for i in range(df.shape[1] - len(colunas_personalizadas))]
+                        df.columns = colunas_personalizadas_juros + ['Coluna Extra {}'.format(i) for i in range(df.shape[1] - len(colunas_personalizadas_juros))]
 
                     # Remove linhas completamente vazias
                     df = df.dropna(how='all')
@@ -54,9 +52,21 @@ def extract_table_from_pdf(pdf_path):
 def process_pdf(pdf_path):
     """Processa o PDF e armazena os dados extraídos."""
     df = extract_table_from_pdf(pdf_path)
-    sheet_name = "Resultado Operacional"
+    sheet_name = "Resultado Juros"
 
     if not df.empty:
+        # Remover palavras indesejadas nas células do DataFrame
+        palavras_indesejadas = [
+            "Capital", "Finanças", "Fomento", "Mercantil", "LTDA", 
+            "Extrato de Conta", "Data do Lançamento", "Página", 
+            "Usuário", "ACA", "Pendências Genéricas", "Prorrogação de Títulos", 
+            "Origem dos Lançamentos", "Doctº", "Data", "Saldo", "JUROS S/PRORROGACOES","90.03.0003", "Saldo Inicial"
+        ]
+        
+        # Substituir palavras indesejadas por uma string vazia
+        df = df.applymap(lambda x: ' ' if isinstance(x, str) and any(palavra in x for palavra in palavras_indesejadas) else x)
+        
+        # Atualiza os dados
         if sheet_name in report_data:
             report_data[sheet_name] = pd.concat([report_data[sheet_name], df], ignore_index=True, sort=False)
         else:
